@@ -1,0 +1,3 @@
+[submodule "external/onikakushi"]
+	path = external/onikakushi
+	url = https://github.com/07th-mod/onikakushi.git
