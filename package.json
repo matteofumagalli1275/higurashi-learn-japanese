@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "start": "webpack-dev-server --open --mode development",
-    "build": "webpack --mode production"
+    "build": "node buildJson.js && webpack --mode production"
   },
   "author": "",
   "license": "ISC",

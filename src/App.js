@@ -70,8 +70,8 @@ const useStyles = makeStyles({
   },
 });
 
-async function getJsonAsync(name) {
-  let response = await fetch(`scripts/${name}`);
+async function getJsonAsync(game, file) {
+  let response = await fetch(`scripts/${game}/${file}.json`);
   let data = await response.json()
   return data;
 }
@@ -91,9 +91,10 @@ export default function App(props) {
     }
   }
 
-  function getNovelText(chName) {
-    getJsonAsync(chName + ".json").then(data => {
+  function getNovelText(game, chName) {
+    getJsonAsync(game, chName).then(data => {
       setNovelText(generateContent(data))
+      window.scrollTo(0, 0)
     });
   }
 
@@ -115,13 +116,15 @@ export default function App(props) {
     )
   }
 
+
+
   const drawer = (
     <div>
       <div className={classes.toolbar} />
       {gamesjSON.map((game, gameIndex) => (
-        <List subheader={<ListSubheader>{game.game}</ListSubheader>} className={classes.listDrawer}>
-          {gamesjSON[gameIndex].files.map((chName, index) => (
-            <ListItem button key={chName} onClick={() => { getNovelText(chName); window.scrollTo(0, 0); }}>
+        <List subheader={<ListSubheader>{game.name}</ListSubheader>} className={classes.listDrawer}>
+          { gamesjSON[gameIndex].files.map((chName, index) => (
+            <ListItem button key={chName} onClick={() => { getNovelText(game.name, chName);}}>
               <ListItemIcon><LocalLibraryIcon /></ListItemIcon>
               <ListItemText primary={chName} />
             </ListItem>

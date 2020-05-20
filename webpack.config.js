@@ -3,8 +3,6 @@ const fs = require('fs');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 
-
-
 module.exports = {
     entry: ['babel-polyfill', "./src/index.js"],
     module: {
