@@ -1,5 +1,10 @@
 const fs = require('fs');
-var files = fs.readdirSync('./external/');
+var files = [
+    'onikakushi',
+    'watanagashi',
+    'tatarigoroshi',
+    'himatsubushi'
+]
 var games = []
 
 for (let gameName of files) {
@@ -53,7 +58,9 @@ function txtToJson(gameName, file) {
         if(func === "OutputLine") {
             
             if(param1.startsWith("<color=")) {
-                scriptIndex++
+                if(scriptObj[scriptIndex].textJp !== "") {
+                    scriptIndex++
+                }
                 scriptObj[scriptIndex] = newScriptTemplate()
                 try {
                     scriptObj[scriptIndex].color = param1.match(/#[0-9a-fA-F]*/)[0]

@@ -19,12 +19,15 @@ import Typography from '@material-ui/core/Typography';
 import LocalLibraryIcon from '@material-ui/icons/LocalLibrary';
 import { makeStyles, useTheme } from '@material-ui/core/styles';
 import ListSubheader from '@material-ui/core/ListSubheader';
+import Collapse from '@material-ui/core/Collapse';
+import ExpandLess from '@material-ui/icons/ExpandLess';
+import ExpandMore from '@material-ui/icons/ExpandMore';
 import gamesjSON from './games.json'
 import { createMuiTheme } from '@material-ui/core/styles';
 import { ThemeProvider } from '@material-ui/styles';
 import { purple } from '@material-ui/core/colors';
 
-const drawerWidth = 240;
+const drawerWidth = 280;
 
 const theme = createMuiTheme({
   palette: {
@@ -85,13 +88,8 @@ export default function App(props) {
     setMobileOpen(!mobileOpen);
   };
 
-  const genLabelColor = function (color) {
-    return {
-      color: color,
-    }
-  }
-
   function getNovelText(game, chName) {
+    setNovelText("Loading...")
     getJsonAsync(game, chName).then(data => {
       setNovelText(generateContent(data))
       window.scrollTo(0, 0)
@@ -103,7 +101,7 @@ export default function App(props) {
       <div>
         {json.map((elem, index) => (
           <div>
-            <p style={genLabelColor(elem.color)}><b>{elem.labelJp}/{elem.labelEn}</b></p>
+            <p style={{ color: elem.color }}><b>{elem.labelJp}/{elem.labelEn}</b></p>
             {elem.textJp.map((sentence, index) => (
               <div><br />
                 <span>{sentence}</span><br />
@@ -116,21 +114,43 @@ export default function App(props) {
     )
   }
 
-
+  const [itemState, setItemState] = useState("");
 
   const drawer = (
     <div>
       <div className={classes.toolbar} />
-      {gamesjSON.map((game, gameIndex) => (
-        <List subheader={<ListSubheader>{game.name}</ListSubheader>} className={classes.listDrawer}>
-          { gamesjSON[gameIndex].files.map((chName, index) => (
-            <ListItem button key={chName} onClick={() => { getNovelText(game.name, chName);}}>
-              <ListItemIcon><LocalLibraryIcon /></ListItemIcon>
-              <ListItemText primary={chName} />
+      <List>
+        {gamesjSON.map((game, gameIndex) => (
+          <div>
+            <ListItem button onClick={
+              () => {
+                if (itemState !== game.name)
+                  setItemState(game.name)
+                else
+                  setItemState("")
+              }}>
+              <ListItemText primary={game.name} />
+
+              {itemState !== game.name ? <ExpandLess /> : <ExpandMore />}
+
             </ListItem>
-          ))}
-        </List>
-      ))}
+            <List className={classes.listDrawer}>
+
+              <Collapse
+                in={itemState === game.name}
+                timeout='0'
+              >
+                {gamesjSON[gameIndex].files.map((chName, index) => (
+                  <ListItem button key={chName} onClick={() => { getNovelText(game.name, chName); }}>
+                    <ListItemIcon><LocalLibraryIcon /></ListItemIcon>
+                    <ListItemText primary={chName} />
+                  </ListItem>
+                ))}
+              </Collapse>
+            </List>
+          </div>
+        ))}
+      </List>
     </div>
   );
 
