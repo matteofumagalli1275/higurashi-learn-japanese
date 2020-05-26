@@ -1,40 +1,87 @@
 const fs = require('fs');
-var files = [
-    'onikakushi',
-    'watanagashi',
-    'tatarigoroshi',
-    'himatsubushi'
+var mainScriptFilter = /^onik.*$|^wata.*$|^tata.*$|^hima.*$|^omake.*$/
+const supportedGames = [
+    {name: 'onikakushi'},
+    {name: 'watanagashi'},
+    {name: 'tatarigoroshi'},
+    {name: 'himatsubushi'},
 ]
 var games = []
 
-for (let gameName of files) {
-    const game = {
-        name: gameName,
-        files: []
-    }
-    var scriptPath = `./external/${gameName}/Update/`
+for (let supportedGame of supportedGames) {
+    var scriptPath = `./external/${supportedGame.name}/Update/`
     var files = fs.readdirSync(scriptPath);
-    for(let file of files)  {
-        var newFilename = txtToJson(game.name, scriptPath + file)
-        game.files.push(newFilename)
+
+    files = files.filter(file => file.match(mainScriptFilter))
+    if(files.length > 0) {
+        const entry = {
+            name: supportedGame.name,
+            files: []
+        }
+        fs.mkdirSync(`scripts/${entry.name}/`, { recursive: true })
+        for(let file of files)  {
+            const fileNoExt = file.replace(/\.[^/.]+$/, "")
+            var scriptName = ""
+            var priority = 1
+            if(fileNoExt.endsWith("_op")) {
+                scriptName = "Intro"
+                priority = 10
+            } else if(fileNoExt.endsWith("_badend")) {
+                scriptName = "Bad end"
+                priority = 4
+            } else {
+                var matchChNum = file.match(/.*?(\d+)(?:\_(\d+))?/)
+                if(matchChNum.length >= 2) {
+                    var ch = ""
+                    if(matchChNum.length == 3 && matchChNum[2] !== undefined)
+                        ch = parseInt(matchChNum[1]) + " part " + parseInt(matchChNum[2])
+                    else
+                        ch = parseInt(matchChNum[1])
+
+                    if(file.startsWith("omake")) {
+                        scriptName = "Omake " + ch
+                        priority = 0
+                    } else if(file.indexOf("_tips") >= 0) {
+                        scriptName = "Tip " + ch
+                        priority = 3
+                    } else if(file.indexOf("_ep") >= 0) {
+                        scriptName = "Epilogue " + ch
+                        priority = 2
+                    } 
+                    else {
+                        scriptName = "Day " + ch
+                        priority = 5
+                    }
+                }
+            }
+
+            var scriptObj = []
+            scriptObj = txtToJson(scriptObj, entry.name, scriptPath,  file)
+
+            const newFilename = scriptName.replace(/\ /g, '_') + '.json'
+            fs.writeFileSync(`scripts/${entry.name}/${newFilename}`, JSON.stringify(scriptObj,null,2))
+            entry.files.push({ name: scriptName, file: newFilename, priority: priority})
+        }
+        entry.files.sort((a,b) => (a.priority < b.priority) ? 1 : ((b.priority < a.priority) ? -1 : 0))
+        entry.files.forEach(file => delete file.priority);
+
+        console.log(entry)
+        games.push(entry)
     }
-    games.push(game)
+    
 }
 
 fs.writeFileSync("./src/games.json", JSON.stringify(games))
 
-function txtToJson(gameName, file) {
-    console.log(file)
-    var text = fs.readFileSync(file).toString();
+function txtToJson(scriptObj, gameName, scriptPath, filename) {
     function newScriptTemplate() {
         return {color: "#ffffff", labelEn: "Narrator", labelJp: "", textJp: [], textEn: []}
     }
 
+    var file = scriptPath + filename
+    var text = fs.readFileSync(file).toString();
 	//This regex gets all strings parameters inside OutputLineAll and OutputLine functions
-    var itemMatch = text.matchAll(/(OutputLineAll|OutputLine)\(.*?\"([\s\S]*?)\"[\s\S]*?(?:(?=\".*?\")\"(.*)\".*,|(?!\".*?\");)/gm)
-    var scriptIndex = 0
-    var scriptObj = [newScriptTemplate()]
-    var count = 0
+    var itemMatch = text.matchAll(/(OutputLineAll|OutputLine|ModCallScriptSection)\(.*?\"([\s\S]*?)\"[\s\S]*?(?:(?=\".*?\")\"(.*)\".*,|(?!\".*?\");)/gm)
     var lastSentence = ""
     for(let result of itemMatch) {
         var func = result[1]
@@ -48,43 +95,47 @@ function txtToJson(gameName, file) {
             param2 = result[3].replace(/\\"/g,"\"").trim()
         }
         
-        if(func === "OutputLineAll") {
-            if(param1 === "" && scriptObj[scriptIndex].labelJp !== "") {
-                // Reset to narrator
-                scriptIndex++
-                scriptObj[scriptIndex] = newScriptTemplate()
-            }
-        }
-        if(func === "OutputLine") {
-            
-            if(param1.startsWith("<color=")) {
-                if(scriptObj[scriptIndex].textJp !== "") {
-                    scriptIndex++
+        switch(func) {
+            case "OutputLineAll":
+                if(param1 === "" && (scriptObj.length <= 0 || scriptObj[scriptObj.length - 1].labelJp !== "")) {
+                    // Reset to narrator
+                    scriptObj.push(newScriptTemplate())
                 }
-                scriptObj[scriptIndex] = newScriptTemplate()
-                try {
-                    scriptObj[scriptIndex].color = param1.match(/#[0-9a-fA-F]*/)[0]
-                    scriptObj[scriptIndex].labelJp = param1.match(/(?<=<color=.*>)(.*?)(?=<\/color>)/)[0]
-                    scriptObj[scriptIndex].labelEn = param2.match(/(?<=<color=.*>)(.*?)(?=<\/color>)/)[0]
-                } catch(e) {
-                    //Match failed, leave template
-                    console.log("Some scripts may be broken due to miss a color or english char name. Leave it be...")
-                    console.log("Error at: " + lastSentence)
-                    console.warn(e)
-                }
+                break
+            case "OutputLine":
+                if(param1.startsWith("<color=")) {
+                    // Add a new entry only if there was test in last dialog
+                    if(scriptObj.length <= 0 || scriptObj[scriptObj.length - 1].textJp.length > 0) {
+                        scriptObj.push(newScriptTemplate())
+                    }
+                    const scriptIndex = scriptObj.length - 1
+                    try {
+                        scriptObj[scriptIndex].color = param1.match(/#[0-9a-fA-F]*/)[0]
+                        scriptObj[scriptIndex].labelJp = param1.match(/(?<=<color=.*>)(.*?)(?=<\/color>)/)[0]
+                        scriptObj[scriptIndex].labelEn = param2.match(/(?<=<color=.*>)(.*?)(?=<\/color>)/)[0]
+                    } catch(e) {
+                        //Match failed, leave template
+                        console.log("Some scripts may be broken due to miss a color or english char name. Leave it be...")
+                        console.log("Error at: " + lastSentence)
+                        console.warn(e)
+                    }
 
-            } else {
-                lastSentence = param2
-                scriptObj[scriptIndex].textJp.push(param1);
-                scriptObj[scriptIndex].textEn.push(param2);
-            }
+                } else {
+                    lastSentence = param2
+                    if(scriptObj.length <= 0) {
+                        scriptObj.push(newScriptTemplate())
+                    }
+                    const scriptIndex = scriptObj.length - 1
+                    scriptObj[scriptIndex].textJp.push(param1);
+                    scriptObj[scriptIndex].textEn.push(param2);
+                }
+                break
+            case "ModCallScriptSection":
+                scriptObj = txtToJson(scriptObj, gameName, scriptPath, param1 + ".txt")
+                break
         }
+
     }
 
-
-    var newFilename = file.match(/^.*?([^\\\/]*)\.txt$/)[1]
-    fs.mkdirSync(`scripts/${gameName}/`, { recursive: true })
-    fs.writeFileSync(`scripts/${gameName}/${newFilename}.json`, JSON.stringify(scriptObj,null,2))
-
-    return newFilename
+    return scriptObj
 }

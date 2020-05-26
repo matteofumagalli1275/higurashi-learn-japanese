@@ -74,7 +74,7 @@ const useStyles = makeStyles({
 });
 
 async function getJsonAsync(game, file) {
-  let response = await fetch(`scripts/${game}/${file}.json`);
+  let response = await fetch(`scripts/${game}/${file}`);
   let data = await response.json()
   return data;
 }
@@ -115,6 +115,7 @@ export default function App(props) {
   }
 
   const [itemState, setItemState] = useState("");
+  const [scriptSelected, setScriptSelected] = useState(null);
 
   const drawer = (
     <div>
@@ -140,10 +141,14 @@ export default function App(props) {
                 in={itemState === game.name}
                 timeout='0'
               >
-                {gamesjSON[gameIndex].files.map((chName, index) => (
-                  <ListItem button key={chName} onClick={() => { getNovelText(game.name, chName); }}>
+                {gamesjSON[gameIndex].files.map((file, index) => (
+                  <ListItem button 
+                    key={file.file} 
+                    onClick={() => { setScriptSelected(file); getNovelText(game.name, file.file); }}
+                    selected={scriptSelected === file}
+                  >
                     <ListItemIcon><LocalLibraryIcon /></ListItemIcon>
-                    <ListItemText primary={chName} />
+                    <ListItemText primary={file.name} />
                   </ListItem>
                 ))}
               </Collapse>
@@ -170,7 +175,7 @@ export default function App(props) {
               <MenuIcon />
             </IconButton>
             <Typography variant="h6" noWrap>
-              Text
+            {scriptSelected === null ? "Select a script":scriptSelected.name}
           </Typography>
           </Toolbar>
         </AppBar>
