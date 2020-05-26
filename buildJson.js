@@ -56,7 +56,7 @@ for (let supportedGame of supportedGames) {
             }
 
             var scriptObj = []
-            scriptObj = txtToJson(scriptObj, entry.name, scriptPath,  file)
+            scriptObj = txtToJson(scriptObj, entry.name, scriptPath,  file, null)
 
             const newFilename = scriptName.replace(/\ /g, '_') + '.json'
             fs.writeFileSync(`scripts/${entry.name}/${newFilename}`, JSON.stringify(scriptObj,null,2))
@@ -65,7 +65,7 @@ for (let supportedGame of supportedGames) {
         entry.files.sort((a,b) => (a.priority < b.priority) ? 1 : ((b.priority < a.priority) ? -1 : 0))
         entry.files.forEach(file => delete file.priority);
 
-        console.log(entry)
+        //console.log(entry)
         games.push(entry)
     }
     
@@ -73,13 +73,17 @@ for (let supportedGame of supportedGames) {
 
 fs.writeFileSync("./src/games.json", JSON.stringify(games))
 
-function txtToJson(scriptObj, gameName, scriptPath, filename) {
+function txtToJson(scriptObj, gameName, scriptPath, filename, filterFunc) {
     function newScriptTemplate() {
         return {color: "#ffffff", labelEn: "Narrator", labelJp: "", textJp: [], textEn: []}
     }
 
+    var allowExternalScript = true //Temporary workaround to get only one censor script version
     var file = scriptPath + filename
     var text = fs.readFileSync(file).toString();
+    if(filterFunc !== null) {
+        text = getFuncBody(text, filterFunc)
+    }
 	//This regex gets all strings parameters inside OutputLineAll and OutputLine functions
     var itemMatch = text.matchAll(/(OutputLineAll|OutputLine|ModCallScriptSection)\(.*?\"([\s\S]*?)\"[\s\S]*?(?:(?=\".*?\")\"(.*)\".*,|(?!\".*?\");)/gm)
     var lastSentence = ""
@@ -97,12 +101,14 @@ function txtToJson(scriptObj, gameName, scriptPath, filename) {
         
         switch(func) {
             case "OutputLineAll":
+                allowExternalScript = true
                 if(param1 === "" && (scriptObj.length <= 0 || scriptObj[scriptObj.length - 1].labelJp !== "")) {
                     // Reset to narrator
                     scriptObj.push(newScriptTemplate())
                 }
                 break
             case "OutputLine":
+                allowExternalScript = true
                 if(param1.startsWith("<color=")) {
                     // Add a new entry only if there was test in last dialog
                     if(scriptObj.length <= 0 || scriptObj[scriptObj.length - 1].textJp.length > 0) {
@@ -131,11 +137,29 @@ function txtToJson(scriptObj, gameName, scriptPath, filename) {
                 }
                 break
             case "ModCallScriptSection":
-                scriptObj = txtToJson(scriptObj, gameName, scriptPath, param1 + ".txt")
+                if(allowExternalScript) {
+                    var callscriptParams = result[0].match(/\"(.*?)\".*?\"(.*?)\"/)
+                    scriptObj = txtToJson(scriptObj, gameName, scriptPath, callscriptParams[1] + ".txt", callscriptParams[2])
+                    allowExternalScript = false
+                }
                 break
         }
 
     }
 
     return scriptObj
+}
+
+function getFuncBody(text, funcname) {
+    
+    //[\s\S]*?(void|$(?![\r\n]))
+    var re = new RegExp(funcname + "[\\s\\S]*?(void|$(?![\\r\\n]))", "gm");
+    var result = text.match(re)
+
+    if(result !== null) {
+        return result[0]
+    } else {
+        console.warn("Function " + funcname + " not found")
+        return ""
+    }
 }
