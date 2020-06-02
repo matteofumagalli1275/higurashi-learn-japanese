@@ -12,7 +12,7 @@ for (let supportedGame of supportedGames) {
     var scriptPath = `./external/${supportedGame.name}/Update/`
     var files = fs.readdirSync(scriptPath);
 
-    files = files.filter(file => file.match(mainScriptFilter))
+    files = files.filter(file => file.match(mainScriptFilter) && !file.match("vm00|vm0x"))
     if(files.length > 0) {
         const entry = {
             name: supportedGame.name,
