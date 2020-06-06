@@ -1,10 +1,13 @@
 const fs = require('fs');
-var mainScriptFilter = /^onik.*$|^wata.*$|^tata.*$|^hima.*$|^omake.*$/
+var mainScriptFilter = /^onik.*$|^wata.*$|^tata.*$|^hima.*$|^omake.*$|^_meak.*$|^_tsum.*$|^tsum.*$|^_mina.*$/
 const supportedGames = [
     {name: 'onikakushi'},
     {name: 'watanagashi'},
     {name: 'tatarigoroshi'},
     {name: 'himatsubushi'},
+    {name: 'maekashi'},
+    {name: 'tsumihoroboshi'},
+    {name: 'minagoroshi'},
 ]
 var games = []
 
@@ -26,8 +29,18 @@ for (let supportedGame of supportedGames) {
             if(fileNoExt.endsWith("_op")) {
                 scriptName = "Intro"
                 priority = 10
-            } else if(fileNoExt.endsWith("_badend")) {
+            }
+            else if(fileNoExt.endsWith("_ep")) {
+                scriptName = "Epilogue"
+                priority = 3
+            }  else if (fileNoExt.endsWith("_badend")) {
                 scriptName = "Bad end"
+                priority = 4
+            } else if (fileNoExt.endsWith("_badend1")) {
+                scriptName = "Bad end 1"
+                priority = 4
+            } else if (fileNoExt.endsWith("_badend2")) {
+                scriptName = "Bad end 2"
                 priority = 4
             } else {
                 var matchChNum = file.match(/.*?(\d+)(?:\_(\d+))?/)

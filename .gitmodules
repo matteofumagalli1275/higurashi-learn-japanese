@@ -10,3 +10,12 @@
 [submodule "external/watanagashi"]
 	path = external/watanagashi
 	url = https://github.com/07th-mod/watanagashi.git
+[submodule "external/maekashi"]
+	path = external/maekashi
+	url = https://github.com/07th-mod/meakashi.git
+[submodule "external/tsumihoroboshi"]
+	path = external/tsumihoroboshi
+	url = https://github.com/07th-mod/tsumihoroboshi.git
+[submodule "external/minagoroshi"]
+	path = external/minagoroshi
+	url = https://github.com/07th-mod/minagoroshi.git
